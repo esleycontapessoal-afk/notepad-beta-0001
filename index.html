@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NotePad - Esley Augusto</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Dots&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-zen-dots { font-family: 'Zen Dots', cursive; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        [v-cloak] { display: none; }
+        
+        /* Animações de UI */
+        .toast-animate {
+            animation: slideDown 0.3s ease-out forwards;
+        }
+        @keyframes slideDown {
+            from { transform: translate(-50%, -100%); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
+
+        .modal-animate {
+            animation: modalFadeIn 0.3s ease-out forwards;
+        }
+        @keyframes modalFadeIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        /* Efeito de Vidro (Glassmorphism) */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 selection:bg-cyan-500">
+    <div id="app" v-cloak>
+        <!-- Notificação (Toast) -->
+        <div v-if="toastMessage" class="fixed top-6 left-1/2 -translate-x-1/2 z-[200] toast-animate">
+            <div class="bg-amber-500 text-slate-950 px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border-2 border-amber-400">
+                <i data-lucide="alert-triangle" class="shrink-0 w-5 h-5"></i>
+                <p class="text-xs font-black uppercase tracking-tight leading-tight">
+                    {{ toastMessage }}
+                </p>
+                <button @click="toastMessage = ''" class="hover:opacity-70 transition-opacity ml-2">
+                    <i data-lucide="x" class="w-4.5 h-4.5"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Tela de Autenticação -->
+        <div v-if="!currentUser" class="min-h-screen flex items-center justify-center p-4">
+            <div class="w-full max-w-md">
+                <div class="text-center mb-8">
+                    <h1 class="text-4xl sm:text-5xl mb-3 tracking-tighter font-zen-dots">
+                        Note <span class="text-cyan-400 drop-shadow-2xl">Pad</span>
+                    </h1>
+                    <div class="inline-flex flex-col items-center gap-2">
+                        <div class="inline-flex items-center gap-2 bg-slate-950 px-3 py-1 rounded-full border border-slate-800">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
+                            <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Version Beta v.1</span>
+                        </div>
+                        <p class="text-[9px] text-slate-500 uppercase tracking-[0.2em] font-medium mt-2">
+                            Criado por <span class="text-slate-300">Esley Augusto</span>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 sm:p-10 rounded-[2rem] shadow-2xl relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-transparent via-cyan-500 to-transparent"></div>
+                    <h2 class="text-2xl font-black mb-8 text-center uppercase tracking-tight">
+                        {{ isLoginMode ? 'Bem-vindo de volta' : 'Crie a sua conta' }}
+                    </h2>
+                    
+                    <form @submit.prevent="handleAuthSubmit" class="space-y-5">
+                        <div class="relative">
+                            <i data-lucide="user" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500"></i>
+                            <input v-model="authForm.username" placeholder="Utilizador" class="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl py-4 pl-12 pr-5 outline-none focus:border-cyan-400 transition-colors">
+                        </div>
+                        <div class="relative">
+                            <i data-lucide="lock" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500"></i>
+                            <input v-model="authForm.password" type="password" placeholder="Palavra-passe" class="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl py-4 pl-12 pr-5 outline-none focus:border-cyan-400 transition-colors">
+                        </div>
+                        <div v-if="!isLoginMode" class="relative">
+                            <i data-lucide="check-circle" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500"></i>
+                            <input v-model="authForm.confirmPassword" type="password" placeholder="Confirmar Palavra-passe" class="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl py-4 pl-12 pr-5 outline-none focus:border-cyan-400 transition-colors">
+                        </div>
+                        
+                        <p v-if="authError" class="text-red-400 text-xs font-bold bg-red-400/10 p-2 rounded-lg text-center">{{ authError }}</p>
+                        <p v-if="authSuccess" class="text-emerald-400 text-xs font-bold bg-emerald-400/10 p-2 rounded-lg text-center">{{ authSuccess }}</p>
+                        
+                        <button :disabled="isAuthLoading" class="w-full bg-cyan-500 text-slate-950 font-black py-4 rounded-xl hover:bg-cyan-400 transition-all uppercase tracking-widest text-sm flex justify-center items-center gap-2">
+                            {{ isAuthLoading ? 'A processar...' : (isLoginMode ? 'Aceder Agora' : 'Finalizar Registo') }}
+                            <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                        </button>
+                    </form>
+                    
+                    <button @click="toggleAuthMode" class="w-full text-center mt-6 text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-cyan-400 transition-colors">
+                        {{ isLoginMode ? 'Criar Nova Conta' : 'Voltar ao Login' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Principal -->
+        <div v-else class="min-h-screen pb-20">
+            <!-- Header -->
+            <header class="p-4 sm:p-6 md:p-8 border-b border-slate-800 bg-slate-900/80 backdrop-blur-xl sticky top-0 z-50">
+                <div class="max-w-6xl mx-auto flex flex-col gap-4">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h1 class="text-2xl sm:text-3xl font-bold flex items-center gap-2 font-zen-dots">
+                                Note <span class="text-cyan-400">Pad</span>
+                                <span class="text-[10px] bg-slate-800 text-cyan-400 px-2 py-0.5 rounded border border-cyan-500/30 font-sans tracking-normal">Beta</span>
+                            </h1>
+                            <p class="text-slate-400 text-[10px] mt-1 uppercase tracking-widest flex items-center gap-2">
+                                <i data-lucide="user" class="w-3 h-3 text-cyan-400"></i>
+                                Utilizador: <span class="text-slate-200 font-bold">{{ currentUser.name }}</span>
+                            </p>
+                        </div>
+                        <div class="flex gap-2 items-center">
+                            <button @click="showSuggestionModal = true" class="flex items-center gap-2 bg-slate-800/50 hover:bg-cyan-500/10 text-cyan-400 px-4 py-2 rounded-xl border border-cyan-500/20 transition-all group">
+                                <i data-lucide="lightbulb" class="w-4 h-4 group-hover:animate-pulse"></i>
+                                <span class="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Dar Ideia</span>
+                            </button>
+                            <div class="w-[1px] h-6 bg-slate-800 mx-1 hidden sm:block"></div>
+                            <button @click="toggleViewMode" class="p-2 text-slate-500 hover:text-cyan-400 transition-colors">
+                                <i :data-lucide="viewMode === 'grid' ? 'list' : 'layout-grid'" class="w-5 h-5"></i>
+                            </button>
+                            <button @click="logout" class="flex items-center gap-2 text-xs font-medium text-slate-400 hover:text-red-400 transition-colors px-3 py-2 rounded-lg hover:bg-slate-800">
+                                <i data-lucide="log-out" class="w-4 h-4"></i>
+                                <span class="hidden sm:inline">Sair</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="relative group w-full">
+                        <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4.5 h-4.5"></i>
+                        <input v-model="searchTerm" type="text" placeholder="Pesquisar nas suas notas..." class="w-full bg-slate-950/50 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-sm text-slate-200 outline-none focus:border-cyan-400 transition-all">
+                    </div>
+
+                    <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                        <button v-for="f in ['Todas', 'Fixadas', ...tags]" :key="f" @click="activeFilter = f" 
+                                :class="['px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border shrink-0', activeFilter === f ? 'bg-cyan-500 text-slate-950 border-cyan-500 shadow-lg shadow-cyan-500/20' : 'bg-slate-800 text-slate-500 border-slate-700 hover:border-slate-600']">
+                            {{ f }}
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <main class="max-w-5xl mx-auto px-4 sm:px-6 mt-6 w-full">
+                <!-- Editor -->
+                <div :class="['glass-panel border rounded-2xl p-4 sm:p-6 mb-10 transition-all', editingId ? 'border-cyan-500/50 ring-2 ring-cyan-500/10' : 'border-slate-800']">
+                    <div class="flex flex-col gap-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                                <i :data-lucide="editingId ? 'edit-3' : 'plus-circle'" class="w-3 h-3"></i>
+                                {{ editingId ? 'Modo de Edição' : 'Criar Nova Nota' }}
+                            </span>
+                            <span class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">{{ noteForm.content.length }} caracteres</span>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input v-model="noteForm.title" type="text" placeholder="Título da nota..." class="bg-transparent border-b border-slate-700/50 focus:border-cyan-400 outline-none text-xl font-bold py-2 transition-colors">
+                            <select v-model="noteForm.tag" class="bg-slate-900/50 border border-slate-700/50 rounded-lg p-2 text-xs font-bold text-slate-400 outline-none focus:border-cyan-400 uppercase tracking-widest appearance-none cursor-pointer">
+                                <option v-for="t in tags" :key="t" :value="t" class="bg-slate-900">{{ t }}</option>
+                            </select>
+                        </div>
+
+                        <textarea v-model="noteForm.content" placeholder="Comece a escrever aqui..." class="bg-slate-900/40 rounded-xl border border-slate-700/30 p-4 min-h-[140px] outline-none focus:border-cyan-400 text-slate-300 transition-all resize-none"></textarea>
+                        
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mt-2">
+                            <div class="flex gap-2 bg-slate-900/50 p-2 rounded-full border border-slate-800">
+                                <button v-for="c in colorPalette" :key="c.name" @click="noteForm.color = c.name" 
+                                        :class="['w-6 h-6 rounded-full border-2 transition-all', c.bg, noteForm.color === c.name ? 'border-white scale-110 shadow-lg' : 'border-transparent opacity-40 hover:opacity-100']">
+                                </button>
+                            </div>
+                            <div class="flex gap-2 w-full sm:w-auto">
+                                <button v-if="editingId" @click="resetNoteForm" class="px-6 py-3 text-xs font-bold uppercase text-red-400 hover:bg-red-500/10 rounded-xl transition-colors">Cancelar</button>
+                                <button @click="saveNote" :class="['flex-1 sm:flex-none flex items-center justify-center gap-3 font-black py-3 px-8 rounded-xl transition-all shadow-xl active:scale-95', editingId ? 'bg-purple-600 text-white hover:bg-purple-500' : 'bg-cyan-500 text-slate-950 hover:bg-cyan-400']">
+                                    {{ editingId ? 'Guardar' : 'Adicionar' }} <i :data-lucide="editingId ? 'save' : 'plus'" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Listagem -->
+                <div :class="viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'flex flex-col gap-3'">
+                    <div v-for="note in filteredNotes" :key="note.id" 
+                         :class="['bg-slate-800/60 border rounded-2xl p-6 relative transition-all group overflow-hidden', getNoteTheme(note.color).border, getNoteTheme(note.color).shadow, viewMode === 'list' ? 'flex items-center gap-4 py-4' : 'hover:-translate-y-1']">
+                        
+                        <div :class="['absolute top-0 left-0 w-1 h-full', getNoteTheme(note.color).bg]"></div>
+                        
+                        <i v-if="note.isPinned" data-lucide="pin" class="absolute top-4 right-4 text-cyan-400 fill-cyan-400 w-3 h-3"></i>
+                        
+                        <div :class="viewMode === 'list' ? 'flex-grow flex items-center gap-4' : 'flex-grow'">
+                            <div class="flex justify-between items-center mb-3">
+                                <span :class="['text-[8px] font-black uppercase px-1.5 py-0.5 rounded border bg-slate-900/50', getNoteTheme(note.color).text, getNoteTheme(note.color).border]">
+                                    {{ note.tag }}
+                                </span>
+                                <span class="text-[9px] font-bold text-slate-600 flex items-center gap-1">
+                                    <i data-lucide="calendar" class="w-2.5 h-2.5"></i>
+                                    {{ note.date }}
+                                </span>
+                            </div>
+                            <h3 :class="['text-lg font-black mb-2 uppercase leading-tight tracking-tight', getNoteTheme(note.color).text, viewMode === 'list' ? 'mb-0 min-w-[150px]' : '']">
+                                {{ note.title }}
+                            </h3>
+                            <p :class="['text-slate-300 text-sm whitespace-pre-wrap', viewMode === 'list' ? 'line-clamp-1' : 'line-clamp-6 mb-12']">
+                                {{ note.content }}
+                            </p>
+                        </div>
+
+                        <div :class="['flex gap-1', viewMode === 'list' ? '' : 'absolute bottom-5 right-5 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0']">
+                            <button @click="downloadNote(note)" class="p-2 text-slate-500 hover:text-cyan-400 transition-colors" title="Descarregar"><i data-lucide="download" class="w-4 h-4"></i></button>
+                            <button @click="togglePin(note.id)" :class="['p-2 transition-colors', note.isPinned ? 'text-cyan-400' : 'text-slate-500 hover:text-cyan-400']" title="Fixar">
+                                <i data-lucide="star" :class="['w-4 h-4', note.isPinned ? 'fill-current' : '']"></i>
+                            </button>
+                            <button @click="editNote(note)" class="p-2 text-slate-500 hover:text-purple-400 transition-colors" title="Editar"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+                            <button @click="deleteNote(note.id)" class="p-2 text-slate-500 hover:text-red-400 transition-colors" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>
+                    </div>
+
+                    <div v-if="filteredNotes.length === 0" class="col-span-full py-24 text-center">
+                        <div class="inline-flex flex-col items-center gap-4 text-slate-600">
+                            <i data-lucide="sticky-note" class="w-12 h-12 opacity-20"></i>
+                            <p class="uppercase text-[10px] tracking-[0.4em] font-black">Nenhuma nota encontrada no sistema</p>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Footer -->
+            <footer class="mt-auto py-12 text-center border-t border-slate-800/50">
+                <div class="flex flex-col items-center gap-5">
+                    <p class="text-slate-500 text-[9px] uppercase tracking-[0.4em]">
+                        © 2026 <span class="text-cyan-500 font-black font-zen-dots tracking-normal">Note Pad</span> Cloud
+                    </p>
+                    <div class="h-[1px] w-12 bg-slate-800"></div>
+                    <div class="flex items-center gap-6">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            Desenvolvido por <span class="text-cyan-400 font-black">Esley Augusto</span>
+                        </p>
+                        <div class="flex gap-4">
+                             <span class="text-[8px] px-2 py-0.5 bg-slate-800 rounded text-slate-500 uppercase font-black">Secure Storage</span>
+                             <span class="text-[8px] px-2 py-0.5 bg-slate-800 rounded text-slate-500 uppercase font-black">Cloud Sync</span>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </div>
+
+        <!-- Modal de Sugestões -->
+        <div v-if="showSuggestionModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-md">
+            <div class="bg-slate-800 border border-slate-700 w-full max-w-lg rounded-2xl p-6 shadow-2xl relative overflow-hidden modal-animate">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 to-purple-500"></div>
+                
+                <div class="flex justify-between items-center mb-6">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-cyan-500/20 rounded-lg text-cyan-400">
+                           <i data-lucide="lightbulb" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold uppercase tracking-tight">Ideias & Sugestões</h3>
+                            <p class="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Canal Direto com o Desenvolvedor</p>
+                        </div>
+                    </div>
+                    <button @click="showSuggestionModal = false" class="p-2 text-slate-500 hover:text-white transition-colors bg-slate-900/50 rounded-full">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
+                        <p class="text-xs text-slate-400 leading-relaxed">
+                            Tens alguma ideia para melhorar o <span class="text-cyan-400 font-bold">NotePad Beta</span>? 
+                            Envia a tua sugestão abaixo. O <span class="text-slate-200">Esley Augusto</span> irá ler cada uma delas!
+                        </p>
+                    </div>
+
+                    <textarea v-model="suggestionInput" placeholder="Ex: 'Adicionar modo noturno automático', 'Criar pastas para notas'..." 
+                              class="w-full bg-slate-950/50 border border-slate-700 rounded-xl p-4 text-slate-200 h-40 resize-none outline-none focus:border-cyan-400 transition-all placeholder:text-slate-600 text-sm shadow-inner"></textarea>
+                    
+                    <div class="flex flex-col gap-3">
+                        <button @click="submitSuggestion" :disabled="!suggestionInput.trim()"
+                                class="w-full bg-cyan-500 disabled:bg-slate-700 disabled:text-slate-500 text-slate-950 font-black py-4 rounded-xl uppercase tracking-widest text-sm hover:bg-cyan-400 transition-all flex items-center justify-center gap-2 shadow-lg">
+                            Enviar para Análise <i data-lucide="send" class="w-4 h-4"></i>
+                        </button>
+                        <p class="text-[8px] text-center text-slate-600 uppercase font-bold tracking-widest">
+                            A sua mensagem será identificada como: <span class="text-slate-400">{{ currentUser?.name }}</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
+
+        createApp({
+            setup() {
+                // Auth State
+                const currentUser = ref(null);
+                const isLoginMode = ref(true);
+                const isAuthLoading = ref(false);
+                const authError = ref('');
+                const authSuccess = ref('');
+                const authForm = ref({ username: '', password: '', confirmPassword: '' });
+                const registeredUsers = ref([{ username: 'admin', password: '123456', email: 'admin@notepad.com' }]);
+
+                // Note State
+                const notes = ref([]);
+                const noteForm = ref({ title: '', content: '', color: 'cyan', tag: 'Geral' });
+                const editingId = ref(null);
+                const searchTerm = ref('');
+                const activeFilter = ref('Todas');
+                const viewMode = ref('grid');
+                
+                // UI State
+                const toastMessage = ref('');
+                const showSuggestionModal = ref(false);
+                const suggestionInput = ref('');
+                const tags = ['Geral', 'Trabalho', 'Pessoal', 'Ideias', 'Urgente'];
+                
+                const colorPalette = [
+                    { name: 'cyan', bg: 'bg-cyan-500', text: 'text-cyan-400', border: 'border-cyan-500/50', shadow: 'shadow-cyan-500/10' },
+                    { name: 'purple', bg: 'bg-purple-500', text: 'text-purple-400', border: 'border-purple-500/50', shadow: 'shadow-purple-500/10' },
+                    { name: 'rose', bg: 'bg-rose-500', text: 'text-rose-400', border: 'border-rose-500/50', shadow: 'shadow-rose-500/10' },
+                    { name: 'amber', bg: 'bg-amber-500', text: 'text-amber-400', border: 'border-amber-500/50', shadow: 'shadow-amber-500/10' },
+                    { name: 'emerald', bg: 'bg-emerald-500', text: 'text-emerald-400', border: 'border-emerald-500/50', shadow: 'shadow-emerald-500/10' }
+                ];
+
+                onMounted(() => {
+                    const savedNotes = localStorage.getItem('notepad_v1_notes');
+                    if (savedNotes) {
+                        notes.value = JSON.parse(savedNotes);
+                    } else {
+                        notes.value = [{ 
+                            id: 1, 
+                            title: 'Bem-vindo ao NotePad', 
+                            content: 'Este é o seu novo espaço de notas pessoal. Comece por apagar esta nota e criar a sua primeira ideia!', 
+                            date: new Date().toLocaleDateString('pt-PT'), 
+                            color: 'cyan', 
+                            isPinned: true, 
+                            tag: 'Geral' 
+                        }];
+                    }
+                    lucide.createIcons();
+                });
+
+                watch(notes, (newNotes) => {
+                    localStorage.setItem('notepad_v1_notes', JSON.stringify(newNotes));
+                    nextTick(() => lucide.createIcons());
+                }, { deep: true });
+
+                watch([currentUser, showSuggestionModal, viewMode, activeFilter, editingId], () => {
+                    nextTick(() => lucide.createIcons());
+                });
+
+                const handleAuthSubmit = () => {
+                    authError.value = '';
+                    const { username, password, confirmPassword } = authForm.value;
+                    if (!username || !password || (!isLoginMode.value && !confirmPassword)) {
+                        authError.value = 'Por favor, preencha todos os campos.';
+                        return;
+                    }
+                    isAuthLoading.value = true;
+                    setTimeout(() => {
+                        isAuthLoading.value = false;
+                        if (isLoginMode.value) {
+                            const user = registeredUsers.value.find(u => u.username === username && u.password === password);
+                            if (user) {
+                                currentUser.value = { name: user.username, email: user.email };
+                                toastMessage.value = "Bem-vindo! O sistema está em fase Beta para testes.";
+                            } else {
+                                authError.value = 'Utilizador ou palavra-passe incorretos.';
+                            }
+                        } else {
+                            if (password !== confirmPassword) {
+                                authError.value = 'As palavras-passe não coincidem.';
+                                return;
+                            }
+                            registeredUsers.value.push({ ...authForm.value });
+                            authSuccess.value = 'Registo efetuado com sucesso!';
+                            isLoginMode.value = true;
+                            authForm.value.password = '';
+                            authForm.value.confirmPassword = '';
+                        }
+                    }, 1000);
+                };
+
+                const toggleAuthMode = () => {
+                    isLoginMode.value = !isLoginMode.value;
+                    authError.value = '';
+                    authSuccess.value = '';
+                };
+
+                const toggleViewMode = () => {
+                    viewMode.value = viewMode.value === 'grid' ? 'list' : 'grid';
+                };
+
+                const logout = () => {
+                    currentUser.value = null;
+                    authForm.value = { username: '', password: '', confirmPassword: '' };
+                };
+
+                const saveNote = () => {
+                    if (!noteForm.value.title.trim() && !noteForm.value.content.trim()) return;
+                    if (editingId.value) {
+                        notes.value = notes.value.map(n => n.id === editingId.value ? { ...n, ...noteForm.value } : n);
+                        toastMessage.value = "Nota atualizada com sucesso.";
+                        editingId.value = null;
+                    } else {
+                        const newNote = {
+                            id: Date.now(),
+                            ...noteForm.value,
+                            title: noteForm.value.title || 'Sem título',
+                            date: new Date().toLocaleDateString('pt-PT'),
+                            isPinned: false
+                        };
+                        notes.value = [newNote, ...notes.value];
+                        toastMessage.value = "Nova nota adicionada!";
+                    }
+                    resetNoteForm();
+                };
+
+                const resetNoteForm = () => {
+                    noteForm.value = { title: '', content: '', color: 'cyan', tag: 'Geral' };
+                    editingId.value = null;
+                    nextTick(() => lucide.createIcons());
+                };
+
+                const editNote = (note) => {
+                    editingId.value = note.id;
+                    noteForm.value = { title: note.title, content: note.content, color: note.color, tag: note.tag };
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                };
+
+                const deleteNote = (id) => { 
+                    notes.value = notes.value.filter(n => n.id !== id);
+                    toastMessage.value = "Nota removida.";
+                };
+
+                const togglePin = (id) => { 
+                    notes.value = notes.value.map(n => n.id === id ? { ...n, isPinned: !n.isPinned } : n); 
+                };
+
+                const downloadNote = (note) => {
+                    const text = `TITULO: ${note.title.toUpperCase()}\nTAG: ${note.tag}\nDATA: ${note.date}\n\nCONTEUDO:\n${note.content}\n\nGerado por NotePad Cloud 2026`;
+                    const blob = new Blob([text], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = `${note.title.toLowerCase().replace(/\s+/g, '_')}.txt`; a.click();
+                    URL.revokeObjectURL(url);
+                };
+
+                const submitSuggestion = () => {
+                    if (!suggestionInput.value.trim()) return;
+                    suggestionInput.value = "";
+                    showSuggestionModal.value = false;
+                    toastMessage.value = "Obrigado! A sua ideia foi enviada para análise.";
+                };
+
+                const getNoteTheme = (colorName) => colorPalette.find(c => c.name === colorName) || colorPalette[0];
+
+                const filteredNotes = computed(() => {
+                    let filtered = notes.value.filter(n => {
+                        const matchSearch = n.title.toLowerCase().includes(searchTerm.value.toLowerCase()) || 
+                                          n.content.toLowerCase().includes(searchTerm.value.toLowerCase());
+                        const matchFilter = activeFilter.value === 'Todas' || 
+                                          n.tag === activeFilter.value || 
+                                          (activeFilter.value === 'Fixadas' && n.isPinned);
+                        return matchSearch && matchFilter;
+                    });
+                    
+                    return filtered.sort((a, b) => b.isPinned - a.isPinned);
+                });
+
+                return {
+                    currentUser, isLoginMode, isAuthLoading, authError, authSuccess, authForm,
+                    notes, noteForm, editingId, searchTerm, activeFilter, viewMode,
+                    toastMessage, showSuggestionModal, suggestionInput, tags, colorPalette,
+                    handleAuthSubmit, toggleAuthMode, toggleViewMode, logout, saveNote, resetNoteForm,
+                    editNote, deleteNote, togglePin, downloadNote, submitSuggestion,
+                    getNoteTheme, filteredNotes
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
