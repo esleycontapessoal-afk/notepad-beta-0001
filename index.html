@@ -37,9 +37,21 @@
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
+
+        .hero-gradient {
+            background: radial-gradient(circle at center, rgba(34, 211, 238, 0.15) 0%, transparent 70%);
+        }
+
+        .fade-in {
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 selection:bg-cyan-500">
+<body class="bg-slate-900 text-slate-100 selection:bg-cyan-500 overflow-x-hidden">
     <div id="app" v-cloak>
         <!-- Notificação (Toast) -->
         <div v-if="toastMessage" class="fixed top-6 left-1/2 -translate-x-1/2 z-[200] toast-animate">
@@ -54,10 +66,59 @@
             </div>
         </div>
 
+        <!-- TELA DE INÍCIO (Landing Page) -->
+        <div v-if="showWelcome && !currentUser" class="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden hero-gradient">
+            <!-- Decoração de Fundo -->
+            <div class="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-cyan-500/10 blur-[120px] rounded-full"></div>
+            <div class="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-500/10 blur-[120px] rounded-full"></div>
+
+            <div class="max-w-4xl w-full text-center z-10 fade-in">
+                <div class="mb-6 inline-flex items-center gap-2 bg-slate-950/50 px-4 py-2 rounded-full border border-slate-800 backdrop-blur-md">
+                    <span class="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></span>
+                    <span class="text-[10px] text-slate-300 font-black uppercase tracking-[0.3em]">Bem-vindo ao Futuro das Notas</span>
+                </div>
+
+                <h1 class="text-6xl sm:text-8xl md:text-9xl mb-6 tracking-tighter font-zen-dots leading-none">
+                    Note <span class="text-cyan-400 drop-shadow-[0_0_25px_rgba(34,211,238,0.4)]">Pad</span>
+                </h1>
+                
+                <p class="text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto mb-12 leading-relaxed font-medium">
+                    A ferramenta definitiva para organizar as suas ideias, gerir projetos e manter o foco. Simples, rápido e <span class="text-slate-100 underline decoration-cyan-500 decoration-2 underline-offset-4">totalmente cloud</span>.
+                </p>
+
+                <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                    <button @click="startApp" class="group relative px-10 py-5 bg-cyan-500 text-slate-950 font-black rounded-2xl text-lg uppercase tracking-widest transition-all hover:bg-cyan-400 hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(34,211,238,0.3)]">
+                        <span class="flex items-center gap-3">
+                            Começar Agora
+                            <i data-lucide="arrow-right" class="w-6 h-6 transition-transform group-hover:translate-x-1"></i>
+                        </span>
+                    </button>
+                    <button @click="scrollToDev" class="px-10 py-5 bg-transparent border-2 border-slate-700 text-slate-300 font-black rounded-2xl text-lg uppercase tracking-widest transition-all hover:bg-slate-800 hover:border-slate-600">
+                        Saiba Mais
+                    </button>
+                </div>
+
+                <div class="mt-20 pt-10 border-t border-slate-800/50 flex flex-wrap justify-center gap-12 opacity-50 grayscale hover:grayscale-0 transition-all">
+                   <div class="flex items-center gap-2 font-black uppercase tracking-tighter"><i data-lucide="zap" class="w-5 h-5 text-cyan-400"></i> Instantâneo</div>
+                   <div class="flex items-center gap-2 font-black uppercase tracking-tighter"><i data-lucide="shield-check" class="w-5 h-5 text-cyan-400"></i> Seguro</div>
+                   <div class="flex items-center gap-2 font-black uppercase tracking-tighter"><i data-lucide="cloud" class="w-5 h-5 text-cyan-400"></i> Sincronizado</div>
+                </div>
+            </div>
+
+            <div class="absolute bottom-8 left-1/2 -translate-x-1/2 text-center" id="dev-footer">
+                <p class="text-[9px] text-slate-500 uppercase tracking-[0.5em] font-medium">
+                    Designed & Developed by <span class="text-slate-300">Esley Augusto</span>
+                </p>
+            </div>
+        </div>
+
         <!-- Tela de Autenticação -->
-        <div v-if="!currentUser" class="min-h-screen flex items-center justify-center p-4">
+        <div v-if="!currentUser && !showWelcome" class="min-h-screen flex items-center justify-center p-4 modal-animate">
             <div class="w-full max-w-md">
                 <div class="text-center mb-8">
+                    <button @click="showWelcome = true" class="group mb-4 text-slate-500 hover:text-cyan-400 flex items-center gap-2 mx-auto transition-colors text-[10px] font-black uppercase tracking-widest">
+                        <i data-lucide="chevron-left" class="w-4 h-4 group-hover:-translate-x-1 transition-transform"></i> Voltar ao Início
+                    </button>
                     <h1 class="text-4xl sm:text-5xl mb-3 tracking-tighter font-zen-dots">
                         Note <span class="text-cyan-400 drop-shadow-2xl">Pad</span>
                     </h1>
@@ -66,9 +127,6 @@
                             <span class="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
                             <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Version Beta v.1</span>
                         </div>
-                        <p class="text-[9px] text-slate-500 uppercase tracking-[0.2em] font-medium mt-2">
-                            Criado por <span class="text-slate-300">Esley Augusto</span>
-                        </p>
                     </div>
                 </div>
 
@@ -135,7 +193,7 @@
         </div>
 
         <!-- Dashboard Principal -->
-        <div v-else class="min-h-screen pb-20">
+        <div v-else-if="currentUser" class="min-h-screen pb-20 fade-in">
             <!-- Header -->
             <header class="p-4 sm:p-6 md:p-8 border-b border-slate-800 bg-slate-900/80 backdrop-blur-xl sticky top-0 z-50">
                 <div class="max-w-6xl mx-auto flex flex-col gap-4">
@@ -310,7 +368,7 @@
 
 createApp({
     setup() {
-        // --- AUTH STATE (Inicialização Síncrona) ---
+        // --- AUTH STATE ---
         const getSavedUsers = () => {
             const saved = localStorage.getItem('notepad_v1_users');
             return saved ? JSON.parse(saved) : [{ username: 'admin', password: '123456', email: 'admin@notepad.com' }];
@@ -322,6 +380,7 @@ createApp({
         };
 
         const currentUser = ref(getSavedSession());
+        const showWelcome = ref(true); // Controla a nova Landing Page
         const isLoginMode = ref(true);
         const isAuthLoading = ref(false);
         const authError = ref('');
@@ -369,7 +428,7 @@ createApp({
             if (window.lucide) lucide.createIcons();
         });
 
-        // --- WATCHERS (Persistência) ---
+        // --- WATCHERS ---
         watch(notes, (newNotes) => {
             localStorage.setItem('notepad_v1_notes', JSON.stringify(newNotes));
             nextTick(() => { if (window.lucide) lucide.createIcons(); });
@@ -379,11 +438,19 @@ createApp({
             localStorage.setItem('notepad_v1_users', JSON.stringify(newUsers));
         }, { deep: true });
 
-        watch([currentUser, showSuggestionModal, viewMode, activeFilter, editingId], () => {
+        watch([currentUser, showWelcome, showSuggestionModal, viewMode, activeFilter, editingId], () => {
             nextTick(() => { if (window.lucide) lucide.createIcons(); });
         });
 
         // --- MÉTODOS ---
+        const startApp = () => {
+            showWelcome.value = false;
+        };
+
+        const scrollToDev = () => {
+            document.getElementById('dev-footer')?.scrollIntoView({ behavior: 'smooth' });
+        };
+
         const handleAuthSubmit = () => {
             authError.value = '';
             const { username, password, confirmPassword } = authForm.value;
@@ -430,6 +497,7 @@ createApp({
         const logout = () => { 
             currentUser.value = null; 
             localStorage.removeItem('notepad_v1_session');
+            showWelcome.value = true; // Volta para o início ao deslogar
         };
 
         const saveNote = () => {
@@ -489,12 +557,12 @@ createApp({
         });
 
         return {
-            currentUser, isLoginMode, isAuthLoading, authError, authSuccess, authForm,
+            currentUser, showWelcome, isLoginMode, isAuthLoading, authError, authSuccess, authForm,
             notes, noteForm, editingId, searchTerm, activeFilter, viewMode,
             toastMessage, showSuggestionModal, suggestionInput, tags, colorPalette,
             handleAuthSubmit, toggleAuthMode, toggleViewMode, logout, saveNote, resetNoteForm,
             editNote, deleteNote, togglePin, downloadNote, submitSuggestion,
-            getNoteTheme, filteredNotes
+            getNoteTheme, filteredNotes, startApp, scrollToDev
         };
     }
 }).mount('#app');
