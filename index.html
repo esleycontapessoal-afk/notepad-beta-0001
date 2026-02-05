@@ -306,174 +306,198 @@
     </div>
 
     <script>
-        const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
+      const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
 
-        createApp({
-            setup() {
-                // Auth State
-                const currentUser = ref(null);
-                const isLoginMode = ref(true);
-                const isAuthLoading = ref(false);
-                const authError = ref('');
-                const authSuccess = ref('');
-                const authForm = ref({ username: '', password: '', confirmPassword: '' });
-                const registeredUsers = ref([{ username: 'admin', password: '123456', email: 'admin@notepad.com' }]);
+createApp({
+    setup() {
+        // --- AUTH STATE (Inicialização Síncrona) ---
+        const getSavedUsers = () => {
+            const saved = localStorage.getItem('notepad_v1_users');
+            return saved ? JSON.parse(saved) : [{ username: 'admin', password: '123456', email: 'admin@notepad.com' }];
+        };
 
-                // Note State
-                const notes = ref([]);
-                const noteForm = ref({ title: '', content: '', color: 'cyan', tag: 'Geral' });
-                const editingId = ref(null);
-                const searchTerm = ref('');
-                const activeFilter = ref('Todas');
-                const viewMode = ref('grid');
-                
-                // UI State
-                const toastMessage = ref('');
-                const showSuggestionModal = ref(false);
-                const suggestionInput = ref('');
-                const tags = ['Geral', 'Trabalho', 'Pessoal', 'Ideias', 'Urgente'];
-                
-                const colorPalette = [
-                    { name: 'cyan', bg: 'bg-cyan-500', text: 'text-cyan-400', border: 'border-cyan-500/50', shadow: 'shadow-cyan-500/10' },
-                    { name: 'purple', bg: 'bg-purple-500', text: 'text-purple-400', border: 'border-purple-500/50', shadow: 'shadow-purple-500/10' },
-                    { name: 'rose', bg: 'bg-rose-500', text: 'text-rose-400', border: 'border-rose-500/50', shadow: 'shadow-rose-500/10' },
-                    { name: 'amber', bg: 'bg-amber-500', text: 'text-amber-400', border: 'border-amber-500/50', shadow: 'shadow-amber-500/10' },
-                    { name: 'emerald', bg: 'bg-emerald-500', text: 'text-emerald-400', border: 'border-emerald-500/50', shadow: 'shadow-emerald-500/10' }
-                ];
+        const getSavedSession = () => {
+            const session = localStorage.getItem('notepad_v1_session');
+            return session ? JSON.parse(session) : null;
+        };
 
-                onMounted(() => {
-                    const savedNotes = localStorage.getItem('notepad_v1_notes');
-                    if (savedNotes) {
-                        notes.value = JSON.parse(savedNotes);
+        const currentUser = ref(getSavedSession());
+        const isLoginMode = ref(true);
+        const isAuthLoading = ref(false);
+        const authError = ref('');
+        const authSuccess = ref('');
+        const authForm = ref({ username: '', password: '', confirmPassword: '' });
+        const registeredUsers = ref(getSavedUsers());
+
+        // --- NOTE STATE ---
+        const notes = ref([]);
+        const noteForm = ref({ title: '', content: '', color: 'cyan', tag: 'Geral' });
+        const editingId = ref(null);
+        const searchTerm = ref('');
+        const activeFilter = ref('Todas');
+        const viewMode = ref('grid');
+        
+        // --- UI STATE ---
+        const toastMessage = ref('');
+        const showSuggestionModal = ref(false);
+        const suggestionInput = ref('');
+        const tags = ['Geral', 'Trabalho', 'Pessoal', 'Ideias', 'Urgente'];
+        
+        const colorPalette = [
+            { name: 'cyan', bg: 'bg-cyan-500', text: 'text-cyan-400', border: 'border-cyan-500/50', shadow: 'shadow-cyan-500/10' },
+            { name: 'purple', bg: 'bg-purple-500', text: 'text-purple-400', border: 'border-purple-500/50', shadow: 'shadow-purple-500/10' },
+            { name: 'rose', bg: 'bg-rose-500', text: 'text-rose-400', border: 'border-rose-500/50', shadow: 'shadow-rose-500/10' },
+            { name: 'amber', bg: 'bg-amber-500', text: 'text-amber-400', border: 'border-amber-500/50', shadow: 'shadow-amber-500/10' },
+            { name: 'emerald', bg: 'bg-emerald-500', text: 'text-emerald-400', border: 'border-emerald-500/50', shadow: 'shadow-emerald-500/10' }
+        ];
+
+        onMounted(() => {
+            const savedNotes = localStorage.getItem('notepad_v1_notes');
+            if (savedNotes) {
+                notes.value = JSON.parse(savedNotes);
+            } else {
+                notes.value = [{ 
+                    id: 1, 
+                    title: 'Bem-vindo ao NotePad', 
+                    content: 'Este é o seu novo espaço de notas pessoal.', 
+                    date: new Date().toLocaleDateString('pt-PT'), 
+                    color: 'cyan', 
+                    isPinned: true, 
+                    tag: 'Geral' 
+                }];
+            }
+            if (window.lucide) lucide.createIcons();
+        });
+
+        // --- WATCHERS (Persistência) ---
+        watch(notes, (newNotes) => {
+            localStorage.setItem('notepad_v1_notes', JSON.stringify(newNotes));
+            nextTick(() => { if (window.lucide) lucide.createIcons(); });
+        }, { deep: true });
+
+        watch(registeredUsers, (newUsers) => {
+            localStorage.setItem('notepad_v1_users', JSON.stringify(newUsers));
+        }, { deep: true });
+
+        watch([currentUser, showSuggestionModal, viewMode, activeFilter, editingId], () => {
+            nextTick(() => { if (window.lucide) lucide.createIcons(); });
+        });
+
+        // --- MÉTODOS ---
+        const handleAuthSubmit = () => {
+            authError.value = '';
+            const { username, password, confirmPassword } = authForm.value;
+            
+            if (!username || !password || (!isLoginMode.value && !confirmPassword)) {
+                authError.value = 'Preencha todos os campos.';
+                return;
+            }
+
+            isAuthLoading.value = true;
+            
+            setTimeout(() => {
+                isAuthLoading.value = false;
+                if (isLoginMode.value) {
+                    const user = registeredUsers.value.find(u => u.username === username && u.password === password);
+                    if (user) {
+                        currentUser.value = { name: user.username, email: user.email };
+                        localStorage.setItem('notepad_v1_session', JSON.stringify(currentUser.value));
+                        toastMessage.value = "Bem-vindo!";
                     } else {
-                        notes.value = [{ 
-                            id: 1, 
-                            title: 'Bem-vindo ao NotePad', 
-                            content: 'Este é o seu novo espaço de notas pessoal. Comece por apagar esta nota e criar a sua primeira ideia!', 
-                            date: new Date().toLocaleDateString('pt-PT'), 
-                            color: 'cyan', 
-                            isPinned: true, 
-                            tag: 'Geral' 
-                        }];
+                        authError.value = 'Credenciais inválidas.';
                     }
-                    lucide.createIcons();
-                });
-
-                // WATCH: Persistência Robusta
-                watch(notes, (newNotes) => {
-                    localStorage.setItem('notepad_v1_notes', JSON.stringify(newNotes));
-                    // Aguarda a renderização do Vue para recriar os ícones do Lucide
-                    nextTick(() => {
-                        if (typeof lucide !== 'undefined') {
-                            lucide.createIcons();
-                        }
-                    });
-                }, { deep: true });
-
-                watch([currentUser, showSuggestionModal, viewMode, activeFilter, editingId], () => {
-                    nextTick(() => lucide.createIcons());
-                });
-
-                const handleAuthSubmit = () => {
-                    authError.value = '';
-                    const { username, password, confirmPassword } = authForm.value;
-                    if (!username || !password || (!isLoginMode.value && !confirmPassword)) {
-                        authError.value = 'Por favor, preencha todos os campos.';
+                } else {
+                    if (password !== confirmPassword) {
+                        authError.value = 'As passwords não coincidem.';
                         return;
                     }
-                    isAuthLoading.value = true;
-                    setTimeout(() => {
-                        isAuthLoading.value = false;
-                        if (isLoginMode.value) {
-                            const userExists = registeredUsers.value.some(u => u.username === username);
-                            if (!userExists) {
-                                authError.value = 'Este utilizador não existe. Por favor, crie uma conta primeiro.';
-                                return;
-                            }
-                            const user = registeredUsers.value.find(u => u.username === username && u.password === password);
-                            if (user) {
-                                currentUser.value = { name: user.username, email: user.email };
-                                toastMessage.value = "Bem-vindo de volta!";
-                            } else {
-                                authError.value = 'Palavra-passe incorreta.';
-                            }
-                        } else {
-                            if (password !== confirmPassword) {
-                                authError.value = 'As palavras-passe não coincidem.';
-                                return;
-                            }
-                            if (registeredUsers.value.some(u => u.username === username)) {
-                                authError.value = 'Este utilizador já existe.';
-                                return;
-                            }
-                            registeredUsers.value.push({ ...authForm.value });
-                            authSuccess.value = 'Registo efetuado!';
-                            isLoginMode.value = true;
-                        }
-                    }, 1000);
-                };
-
-                const toggleAuthMode = () => { isLoginMode.value = !isLoginMode.value; authError.value = ''; authSuccess.value = ''; };
-                const toggleViewMode = () => { viewMode.value = viewMode.value === 'grid' ? 'list' : 'grid'; };
-                const logout = () => { currentUser.value = null; };
-
-                const saveNote = () => {
-                    if (!noteForm.value.title.trim() && !noteForm.value.content.trim()) return;
-                    if (editingId.value) {
-                        notes.value = notes.value.map(n => n.id === editingId.value ? { ...n, ...noteForm.value } : n);
-                        toastMessage.value = "Nota atualizada.";
-                        editingId.value = null;
-                    } else {
-                        notes.value = [{ id: Date.now(), ...noteForm.value, title: noteForm.value.title || 'Sem título', date: new Date().toLocaleDateString('pt-PT'), isPinned: false }, ...notes.value];
-                        toastMessage.value = "Nota criada!";
+                    if (registeredUsers.value.some(u => u.username === username)) {
+                        authError.value = 'Utilizador já existe.';
+                        return;
                     }
-                    resetNoteForm();
-                };
+                    registeredUsers.value.push({ username, password, email: `${username}@exemplo.com` });
+                    authSuccess.value = 'Conta criada! Faça login.';
+                    isLoginMode.value = true;
+                    authForm.value.password = '';
+                    authForm.value.confirmPassword = '';
+                }
+            }, 600);
+        };
 
-                const resetNoteForm = () => { noteForm.value = { title: '', content: '', color: 'cyan', tag: 'Geral' }; editingId.value = null; };
-                const editNote = (note) => { editingId.value = note.id; noteForm.value = { title: note.title, content: note.content, color: note.color, tag: note.tag }; window.scrollTo({ top: 0, behavior: 'smooth' }); };
+        const toggleAuthMode = () => { isLoginMode.value = !isLoginMode.value; authError.value = ''; authSuccess.value = ''; };
+        const toggleViewMode = () => { viewMode.value = viewMode.value === 'grid' ? 'list' : 'grid'; };
+        
+        const logout = () => { 
+            currentUser.value = null; 
+            localStorage.removeItem('notepad_v1_session');
+        };
 
-                // CORREÇÃO DO BUG: Método de exclusão agora garante a reatividade
-                const deleteNote = (id) => { 
-                    const index = notes.value.findIndex(n => n.id === id);
-                    if (index !== -1) {
-                        notes.value.splice(index, 1);
-                        toastMessage.value = "Nota excluída com sucesso!";
-                    }
-                };
-
-                const togglePin = (id) => { notes.value = notes.value.map(n => n.id === id ? { ...n, isPinned: !n.isPinned } : n); };
-
-                const downloadNote = (note) => {
-                    const text = `TITULO: ${note.title}\nDATA: ${note.date}\n\n${note.content}`;
-                    const blob = new Blob([text], { type: 'text/plain' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url; a.download = `${note.title}.txt`; a.click();
-                };
-
-                const submitSuggestion = () => { suggestionInput.value = ""; showSuggestionModal.value = false; toastMessage.value = "Obrigado pela sugestão!"; };
-                const getNoteTheme = (colorName) => colorPalette.find(c => c.name === colorName) || colorPalette[0];
-
-                const filteredNotes = computed(() => {
-                    let filtered = notes.value.filter(n => {
-                        const matchSearch = n.title.toLowerCase().includes(searchTerm.value.toLowerCase()) || n.content.toLowerCase().includes(searchTerm.value.toLowerCase());
-                        const matchFilter = activeFilter.value === 'Todas' || n.tag === activeFilter.value || (activeFilter.value === 'Fixadas' && n.isPinned);
-                        return matchSearch && matchFilter;
-                    });
-                    return filtered.sort((a, b) => b.isPinned - a.isPinned);
-                });
-
-                return {
-                    currentUser, isLoginMode, isAuthLoading, authError, authSuccess, authForm,
-                    notes, noteForm, editingId, searchTerm, activeFilter, viewMode,
-                    toastMessage, showSuggestionModal, suggestionInput, tags, colorPalette,
-                    handleAuthSubmit, toggleAuthMode, toggleViewMode, logout, saveNote, resetNoteForm,
-                    editNote, deleteNote, togglePin, downloadNote, submitSuggestion,
-                    getNoteTheme, filteredNotes
-                };
+        const saveNote = () => {
+            if (!noteForm.value.title.trim() && !noteForm.value.content.trim()) return;
+            if (editingId.value) {
+                notes.value = notes.value.map(n => n.id === editingId.value ? { ...n, ...noteForm.value } : n);
+                toastMessage.value = "Nota atualizada.";
+                editingId.value = null;
+            } else {
+                notes.value = [{ 
+                    id: Date.now(), 
+                    ...noteForm.value, 
+                    title: noteForm.value.title || 'Sem título', 
+                    date: new Date().toLocaleDateString('pt-PT'), 
+                    isPinned: false 
+                }, ...notes.value];
+                toastMessage.value = "Nota criada!";
             }
-        }).mount('#app');
+            resetNoteForm();
+        };
+
+        const resetNoteForm = () => { noteForm.value = { title: '', content: '', color: 'cyan', tag: 'Geral' }; editingId.value = null; };
+        
+        const editNote = (note) => { 
+            editingId.value = note.id; 
+            noteForm.value = { title: note.title, content: note.content, color: note.color, tag: note.tag }; 
+            window.scrollTo({ top: 0, behavior: 'smooth' }); 
+        };
+
+        const deleteNote = (id) => { 
+            notes.value = notes.value.filter(n => n.id !== id);
+            toastMessage.value = "Eliminada.";
+        };
+
+        const togglePin = (id) => { 
+            notes.value = notes.value.map(n => n.id === id ? { ...n, isPinned: !n.isPinned } : n); 
+        };
+
+        const downloadNote = (note) => {
+            const text = `TITULO: ${note.title}\nDATA: ${note.date}\n\n${note.content}`;
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `${note.title}.txt`; a.click();
+        };
+
+        const submitSuggestion = () => { suggestionInput.value = ""; showSuggestionModal.value = false; toastMessage.value = "Sugestão enviada!"; };
+        const getNoteTheme = (colorName) => colorPalette.find(c => c.name === colorName) || colorPalette[0];
+
+        const filteredNotes = computed(() => {
+            let filtered = notes.value.filter(n => {
+                const matchSearch = n.title.toLowerCase().includes(searchTerm.value.toLowerCase()) || n.content.toLowerCase().includes(searchTerm.value.toLowerCase());
+                const matchFilter = activeFilter.value === 'Todas' || n.tag === activeFilter.value || (activeFilter.value === 'Fixadas' && n.isPinned);
+                return matchSearch && matchFilter;
+            });
+            return filtered.sort((a, b) => b.isPinned - a.isPinned);
+        });
+
+        return {
+            currentUser, isLoginMode, isAuthLoading, authError, authSuccess, authForm,
+            notes, noteForm, editingId, searchTerm, activeFilter, viewMode,
+            toastMessage, showSuggestionModal, suggestionInput, tags, colorPalette,
+            handleAuthSubmit, toggleAuthMode, toggleViewMode, logout, saveNote, resetNoteForm,
+            editNote, deleteNote, togglePin, downloadNote, submitSuggestion,
+            getNoteTheme, filteredNotes
+        };
+    }
+}).mount('#app');
     </script>
 </body>
 </html>
