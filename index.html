@@ -92,14 +92,40 @@
                             <input v-model="authForm.confirmPassword" type="password" placeholder="Confirmar Palavra-passe" class="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl py-4 pl-12 pr-5 outline-none focus:border-cyan-400 transition-colors">
                         </div>
                         
-                        <p v-if="authError" class="text-red-400 text-xs font-bold bg-red-400/10 p-2 rounded-lg text-center">{{ authError }}</p>
+                        <div v-if="authError" class="bg-red-400/10 border border-red-500/20 p-3 rounded-lg flex flex-col items-center gap-1">
+                             <p class="text-red-400 text-xs font-black text-center uppercase tracking-tighter">{{ authError }}</p>
+                             <button v-if="isLoginMode && authError.includes('não existe')" @click="toggleAuthMode" class="text-[10px] text-cyan-400 underline font-bold uppercase tracking-widest">Criar conta agora</button>
+                        </div>
                         <p v-if="authSuccess" class="text-emerald-400 text-xs font-bold bg-emerald-400/10 p-2 rounded-lg text-center">{{ authSuccess }}</p>
                         
-                        <button :disabled="isAuthLoading" class="w-full bg-cyan-500 text-slate-950 font-black py-4 rounded-xl hover:bg-cyan-400 transition-all uppercase tracking-widest text-sm flex justify-center items-center gap-2">
+                        <button :disabled="isAuthLoading" class="w-full bg-cyan-500 text-slate-950 font-black py-4 rounded-xl hover:bg-cyan-400 transition-all uppercase tracking-widest text-sm flex justify-center items-center gap-2 shadow-lg shadow-cyan-500/20">
                             {{ isAuthLoading ? 'A processar...' : (isLoginMode ? 'Aceder Agora' : 'Finalizar Registo') }}
                             <i data-lucide="arrow-right" class="w-5 h-5"></i>
                         </button>
                     </form>
+
+                    <div class="relative my-8">
+                        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-800"></div></div>
+                        <div class="relative flex justify-center text-[10px] uppercase tracking-[0.3em] font-bold"><span class="bg-slate-900 px-4 text-slate-500">Ou continuar com</span></div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <button disabled class="flex flex-col items-center justify-center gap-1 bg-slate-800/40 border border-slate-700/50 p-3 rounded-xl opacity-50 cursor-not-allowed group relative overflow-hidden">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                                <span class="text-[10px] font-black uppercase tracking-widest">Google</span>
+                            </div>
+                            <span class="text-[8px] text-cyan-400 font-bold uppercase tracking-tighter">Em Breve</span>
+                        </button>
+
+                        <button disabled class="flex flex-col items-center justify-center gap-1 bg-slate-800/40 border border-slate-700/50 p-3 rounded-xl opacity-50 cursor-not-allowed group relative overflow-hidden">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-[#1877F2]" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                                <span class="text-[10px] font-black uppercase tracking-widest">Facebook</span>
+                            </div>
+                            <span class="text-[8px] text-cyan-400 font-bold uppercase tracking-tighter">Em Breve</span>
+                        </button>
+                    </div>
                     
                     <button @click="toggleAuthMode" class="w-full text-center mt-6 text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-cyan-400 transition-colors">
                         {{ isLoginMode ? 'Criar Nova Conta' : 'Voltar ao Login' }}
@@ -237,7 +263,6 @@
                 </div>
             </main>
 
-            <!-- Footer -->
             <footer class="mt-auto py-12 text-center border-t border-slate-800/50">
                 <div class="flex flex-col items-center gap-5">
                     <p class="text-slate-500 text-[9px] uppercase tracking-[0.4em]">
@@ -248,10 +273,6 @@
                         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                             Desenvolvido por <span class="text-cyan-400 font-black">Esley Augusto</span>
                         </p>
-                        <div class="flex gap-4">
-                             <span class="text-[8px] px-2 py-0.5 bg-slate-800 rounded text-slate-500 uppercase font-black">Secure Storage</span>
-                             <span class="text-[8px] px-2 py-0.5 bg-slate-800 rounded text-slate-500 uppercase font-black">Cloud Sync</span>
-                        </div>
                     </div>
                 </div>
             </footer>
@@ -261,42 +282,24 @@
         <div v-if="showSuggestionModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-md">
             <div class="bg-slate-800 border border-slate-700 w-full max-w-lg rounded-2xl p-6 shadow-2xl relative overflow-hidden modal-animate">
                 <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 to-purple-500"></div>
-                
                 <div class="flex justify-between items-center mb-6">
                     <div class="flex items-center gap-3">
-                        <div class="p-2 bg-cyan-500/20 rounded-lg text-cyan-400">
-                           <i data-lucide="lightbulb" class="w-6 h-6"></i>
-                        </div>
+                        <div class="p-2 bg-cyan-500/20 rounded-lg text-cyan-400"><i data-lucide="lightbulb" class="w-6 h-6"></i></div>
                         <div>
                             <h3 class="text-xl font-bold uppercase tracking-tight">Ideias & Sugestões</h3>
                             <p class="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Canal Direto com o Desenvolvedor</p>
                         </div>
                     </div>
-                    <button @click="showSuggestionModal = false" class="p-2 text-slate-500 hover:text-white transition-colors bg-slate-900/50 rounded-full">
-                        <i data-lucide="x" class="w-5 h-5"></i>
-                    </button>
+                    <button @click="showSuggestionModal = false" class="p-2 text-slate-500 hover:text-white transition-colors bg-slate-900/50 rounded-full"><i data-lucide="x" class="w-5 h-5"></i></button>
                 </div>
-
                 <div class="space-y-4">
                     <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
-                        <p class="text-xs text-slate-400 leading-relaxed">
-                            Tens alguma ideia para melhorar o <span class="text-cyan-400 font-bold">NotePad Beta</span>? 
-                            Envia a tua sugestão abaixo. O <span class="text-slate-200">Esley Augusto</span> irá ler cada uma delas!
-                        </p>
+                        <p class="text-xs text-slate-400 leading-relaxed">Tens alguma ideia para melhorar o <span class="text-cyan-400 font-bold">NotePad Beta</span>? Envia a tua sugestão abaixo.</p>
                     </div>
-
-                    <textarea v-model="suggestionInput" placeholder="Ex: 'Adicionar modo noturno automático', 'Criar pastas para notas'..." 
-                              class="w-full bg-slate-950/50 border border-slate-700 rounded-xl p-4 text-slate-200 h-40 resize-none outline-none focus:border-cyan-400 transition-all placeholder:text-slate-600 text-sm shadow-inner"></textarea>
-                    
-                    <div class="flex flex-col gap-3">
-                        <button @click="submitSuggestion" :disabled="!suggestionInput.trim()"
-                                class="w-full bg-cyan-500 disabled:bg-slate-700 disabled:text-slate-500 text-slate-950 font-black py-4 rounded-xl uppercase tracking-widest text-sm hover:bg-cyan-400 transition-all flex items-center justify-center gap-2 shadow-lg">
-                            Enviar para Análise <i data-lucide="send" class="w-4 h-4"></i>
-                        </button>
-                        <p class="text-[8px] text-center text-slate-600 uppercase font-bold tracking-widest">
-                            A sua mensagem será identificada como: <span class="text-slate-400">{{ currentUser?.name }}</span>
-                        </p>
-                    </div>
+                    <textarea v-model="suggestionInput" placeholder="Sua ideia..." class="w-full bg-slate-950/50 border border-slate-700 rounded-xl p-4 text-slate-200 h-40 resize-none outline-none focus:border-cyan-400 transition-all placeholder:text-slate-600 text-sm shadow-inner"></textarea>
+                    <button @click="submitSuggestion" :disabled="!suggestionInput.trim()" class="w-full bg-cyan-500 disabled:bg-slate-700 disabled:text-slate-500 text-slate-950 font-black py-4 rounded-xl uppercase tracking-widest text-sm hover:bg-cyan-400 transition-all flex items-center justify-center gap-2 shadow-lg">
+                        Enviar para Análise <i data-lucide="send" class="w-4 h-4"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -356,9 +359,15 @@
                     lucide.createIcons();
                 });
 
+                // WATCH: Persistência Robusta
                 watch(notes, (newNotes) => {
                     localStorage.setItem('notepad_v1_notes', JSON.stringify(newNotes));
-                    nextTick(() => lucide.createIcons());
+                    // Aguarda a renderização do Vue para recriar os ícones do Lucide
+                    nextTick(() => {
+                        if (typeof lucide !== 'undefined') {
+                            lucide.createIcons();
+                        }
+                    });
                 }, { deep: true });
 
                 watch([currentUser, showSuggestionModal, viewMode, activeFilter, editingId], () => {
@@ -376,111 +385,82 @@
                     setTimeout(() => {
                         isAuthLoading.value = false;
                         if (isLoginMode.value) {
+                            const userExists = registeredUsers.value.some(u => u.username === username);
+                            if (!userExists) {
+                                authError.value = 'Este utilizador não existe. Por favor, crie uma conta primeiro.';
+                                return;
+                            }
                             const user = registeredUsers.value.find(u => u.username === username && u.password === password);
                             if (user) {
                                 currentUser.value = { name: user.username, email: user.email };
-                                toastMessage.value = "Bem-vindo! O sistema está em fase Beta para testes.";
+                                toastMessage.value = "Bem-vindo de volta!";
                             } else {
-                                authError.value = 'Utilizador ou palavra-passe incorretos.';
+                                authError.value = 'Palavra-passe incorreta.';
                             }
                         } else {
                             if (password !== confirmPassword) {
                                 authError.value = 'As palavras-passe não coincidem.';
                                 return;
                             }
+                            if (registeredUsers.value.some(u => u.username === username)) {
+                                authError.value = 'Este utilizador já existe.';
+                                return;
+                            }
                             registeredUsers.value.push({ ...authForm.value });
-                            authSuccess.value = 'Registo efetuado com sucesso!';
+                            authSuccess.value = 'Registo efetuado!';
                             isLoginMode.value = true;
-                            authForm.value.password = '';
-                            authForm.value.confirmPassword = '';
                         }
                     }, 1000);
                 };
 
-                const toggleAuthMode = () => {
-                    isLoginMode.value = !isLoginMode.value;
-                    authError.value = '';
-                    authSuccess.value = '';
-                };
-
-                const toggleViewMode = () => {
-                    viewMode.value = viewMode.value === 'grid' ? 'list' : 'grid';
-                };
-
-                const logout = () => {
-                    currentUser.value = null;
-                    authForm.value = { username: '', password: '', confirmPassword: '' };
-                };
+                const toggleAuthMode = () => { isLoginMode.value = !isLoginMode.value; authError.value = ''; authSuccess.value = ''; };
+                const toggleViewMode = () => { viewMode.value = viewMode.value === 'grid' ? 'list' : 'grid'; };
+                const logout = () => { currentUser.value = null; };
 
                 const saveNote = () => {
                     if (!noteForm.value.title.trim() && !noteForm.value.content.trim()) return;
                     if (editingId.value) {
                         notes.value = notes.value.map(n => n.id === editingId.value ? { ...n, ...noteForm.value } : n);
-                        toastMessage.value = "Nota atualizada com sucesso.";
+                        toastMessage.value = "Nota atualizada.";
                         editingId.value = null;
                     } else {
-                        const newNote = {
-                            id: Date.now(),
-                            ...noteForm.value,
-                            title: noteForm.value.title || 'Sem título',
-                            date: new Date().toLocaleDateString('pt-PT'),
-                            isPinned: false
-                        };
-                        notes.value = [newNote, ...notes.value];
-                        toastMessage.value = "Nova nota adicionada!";
+                        notes.value = [{ id: Date.now(), ...noteForm.value, title: noteForm.value.title || 'Sem título', date: new Date().toLocaleDateString('pt-PT'), isPinned: false }, ...notes.value];
+                        toastMessage.value = "Nota criada!";
                     }
                     resetNoteForm();
                 };
 
-                const resetNoteForm = () => {
-                    noteForm.value = { title: '', content: '', color: 'cyan', tag: 'Geral' };
-                    editingId.value = null;
-                    nextTick(() => lucide.createIcons());
-                };
+                const resetNoteForm = () => { noteForm.value = { title: '', content: '', color: 'cyan', tag: 'Geral' }; editingId.value = null; };
+                const editNote = (note) => { editingId.value = note.id; noteForm.value = { title: note.title, content: note.content, color: note.color, tag: note.tag }; window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
-                const editNote = (note) => {
-                    editingId.value = note.id;
-                    noteForm.value = { title: note.title, content: note.content, color: note.color, tag: note.tag };
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                };
-
+                // CORREÇÃO DO BUG: Método de exclusão agora garante a reatividade
                 const deleteNote = (id) => { 
-                    notes.value = notes.value.filter(n => n.id !== id);
-                    toastMessage.value = "Nota removida.";
+                    const index = notes.value.findIndex(n => n.id === id);
+                    if (index !== -1) {
+                        notes.value.splice(index, 1);
+                        toastMessage.value = "Nota excluída com sucesso!";
+                    }
                 };
 
-                const togglePin = (id) => { 
-                    notes.value = notes.value.map(n => n.id === id ? { ...n, isPinned: !n.isPinned } : n); 
-                };
+                const togglePin = (id) => { notes.value = notes.value.map(n => n.id === id ? { ...n, isPinned: !n.isPinned } : n); };
 
                 const downloadNote = (note) => {
-                    const text = `TITULO: ${note.title.toUpperCase()}\nTAG: ${note.tag}\nDATA: ${note.date}\n\nCONTEUDO:\n${note.content}\n\nGerado por NotePad Cloud 2026`;
+                    const text = `TITULO: ${note.title}\nDATA: ${note.date}\n\n${note.content}`;
                     const blob = new Blob([text], { type: 'text/plain' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
-                    a.href = url; a.download = `${note.title.toLowerCase().replace(/\s+/g, '_')}.txt`; a.click();
-                    URL.revokeObjectURL(url);
+                    a.href = url; a.download = `${note.title}.txt`; a.click();
                 };
 
-                const submitSuggestion = () => {
-                    if (!suggestionInput.value.trim()) return;
-                    suggestionInput.value = "";
-                    showSuggestionModal.value = false;
-                    toastMessage.value = "Obrigado! A sua ideia foi enviada para análise.";
-                };
-
+                const submitSuggestion = () => { suggestionInput.value = ""; showSuggestionModal.value = false; toastMessage.value = "Obrigado pela sugestão!"; };
                 const getNoteTheme = (colorName) => colorPalette.find(c => c.name === colorName) || colorPalette[0];
 
                 const filteredNotes = computed(() => {
                     let filtered = notes.value.filter(n => {
-                        const matchSearch = n.title.toLowerCase().includes(searchTerm.value.toLowerCase()) || 
-                                          n.content.toLowerCase().includes(searchTerm.value.toLowerCase());
-                        const matchFilter = activeFilter.value === 'Todas' || 
-                                          n.tag === activeFilter.value || 
-                                          (activeFilter.value === 'Fixadas' && n.isPinned);
+                        const matchSearch = n.title.toLowerCase().includes(searchTerm.value.toLowerCase()) || n.content.toLowerCase().includes(searchTerm.value.toLowerCase());
+                        const matchFilter = activeFilter.value === 'Todas' || n.tag === activeFilter.value || (activeFilter.value === 'Fixadas' && n.isPinned);
                         return matchSearch && matchFilter;
                     });
-                    
                     return filtered.sort((a, b) => b.isPinned - a.isPinned);
                 });
 
